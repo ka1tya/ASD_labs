@@ -22,7 +22,7 @@ function makeRng(seed) {
 }
 const rng = makeRng(seed);
 
-// Матриця суміжності орієнтованого графа
+// Матриця суміжності напрямленого графа
 const dirMatrix = [];
 for (let i = 0; i < n; i++) {
   dirMatrix[i] = [];
@@ -32,7 +32,7 @@ for (let i = 0; i < n; i++) {
   }
 }
 
-// Матриця суміжності неорієнтованого графа
+// Матриця суміжності ненапрямленого графа
 const undirMatrix = Array.from({ length: n }, () => new Array(n).fill(0));
 for (let i = 0; i < n; i++)
   for (let j = 0; j < n; j++)
@@ -144,7 +144,7 @@ function drawCurvedArrow(ctx, x1, y1, x2, y2, side) {
   ctx.fill();
 }
 
-// Вигнута лінія без стрілки (для неорієнтованого графа)
+// Вигнута лінія без стрілки (для ненапрямленого графа)
 function drawCurvedSegment(ctx, x1, y1, x2, y2, side) {
   const { cpx, cpy } = getControlPoint(x1, y1, x2, y2, side);
 
@@ -231,7 +231,7 @@ function drawTriangleOutline(ctx) {
   ctx.restore();
 }
 
-// Малювання орієнтованого графа
+// Малювання напрямленого графа
 const dirCtx = document.getElementById("dirCanvas").getContext("2d");
 drawTriangleOutline(dirCtx);
 
@@ -255,7 +255,7 @@ for (let i = 0; i < n; i++) {
 }
 drawNodes(dirCtx, "#c0392b");
 
-// Малювання неорієнтованого графа
+// Малювання ненапрямленого графа
 const undirCtx = document.getElementById("undirCanvas").getContext("2d");
 drawTriangleOutline(undirCtx);
 
