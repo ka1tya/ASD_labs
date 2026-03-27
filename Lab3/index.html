@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Лабораторна робота №3</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h2>Лабораторна робота №3</h2>
+    <p class="info" id="info"></p>
+
+    <div class="graphs">
+      <div class="graph-block">
+        <h3>Напрямлений граф</h3>
+        <canvas id="dirCanvas" width="700" height="490"></canvas>
+      </div>
+      <div class="graph-block">
+        <h3>Ненапрямлений граф</h3>
+        <canvas id="undirCanvas" width="700" height="490"></canvas>
+      </div>
+    </div>
+
+    <div class="matrices">
+      <div class="mat-block">
+        <h3>Матриця суміжності (напрямлений)</h3>
+        <table id="tDir"></table>
+      </div>
+      <div class="mat-block">
+        <h3>Матриця суміжності (ненапрямлений)</h3>
+        <table id="tUndir"></table>
+      </div>
+    </div>
+
+    <script src="graphs.js"></script>
+  </body>
+</html>
