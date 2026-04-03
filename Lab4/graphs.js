@@ -20,22 +20,22 @@ function makeRng(seed) {
 const rng = makeRng(seed);
 
 // Матриця напрямленого графа
-const dirMatrix = [];
+const dirMatrix1 = [];
 for (let i = 0; i < n; i++) {
-  dirMatrix[i] = [];
+  dirMatrix1[i] = [];
   for (let j = 0; j < n; j++) {
     const val = rng() * 2.0;
-    dirMatrix[i][j] = val * k1 >= 1.0 ? 1 : 0;
+    dirMatrix1[i][j] = val * k1 >= 1.0 ? 1 : 0;
   }
 }
 
 // Матриця ненапрямленого графа
-const undirMatrix = Array.from({ length: n }, () => new Array(n).fill(0));
+const undirMatrix1 = Array.from({ length: n }, () => new Array(n).fill(0));
 for (let i = 0; i < n; i++) {
   for (let j = 0; j < n; j++) {
-    if (dirMatrix[i][j] === 1) {
-      undirMatrix[i][j] = 1;
-      undirMatrix[j][i] = 1;
+    if (dirMatrix1[i][j] === 1) {
+      undirMatrix1[i][j] = 1;
+      undirMatrix1[j][i] = 1;
     }
   }
 }
@@ -228,13 +228,13 @@ dirCtx.lineWidth = 1.5;
 
 for (let i = 0; i < n; i++) {
   for (let j = 0; j < n; j++) {
-    if (dirMatrix[i][j] !== 1) continue;
+    if (dirMatrix1[i][j] !== 1) continue;
     const { x: x1, y: y1 } = points[i];
     const { x: x2, y: y2 } = points[j];
     if (i === j) {
       drawLoop(dirCtx, x1, y1);
     } else {
-      const side = dirMatrix[j][i] === 1 && i > j ? -1 : +1;
+      const side = dirMatrix1[j][i] === 1 && i > j ? -1 : +1;
       drawArrow(dirCtx, x1, y1, x2, y2, side);
     }
   }
@@ -249,7 +249,7 @@ undirCtx.lineWidth = 1.5;
 
 for (let i = 0; i < n; i++) {
   for (let j = i; j < n; j++) {
-    if (undirMatrix[i][j] !== 1) continue;
+    if (undirMatrix1[i][j] !== 1) continue;
     const { x: x1, y: y1 } = points[i];
     const { x: x2, y: y2 } = points[j];
     if (i === j) {
@@ -262,5 +262,62 @@ for (let i = 0; i < n; i++) {
 drawNodes(undirCtx, "#1a5276");
 
 // Вивід матриць
-renderMatrix(dirMatrix, document.getElementById("tDir1"));
-renderMatrix(undirMatrix, document.getElementById("tUndir1"));
+renderMatrix(dirMatrix1, document.getElementById("tDir1"));
+renderMatrix(undirMatrix1, document.getElementById("tUndir1"));
+
+// Характеристики графів
+function calcOutDegrees(m) {
+  return m.map((row) => row.reduce((s, v) => s + v, 0));
+}
+
+function calcInDegrees(m) {
+  const deg = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) deg[j] += m[i][j];
+  return deg;
+}
+
+function calcUndirDegrees(m) {
+  return m.map((row, i) =>
+    row.reduce((s, v, j) => s + (i === j ? v * 2 : v), 0),
+  );
+}
+
+const outDeg = calcOutDegrees(dirMatrix1);
+const inDeg = calcInDegrees(dirMatrix1);
+const undirDeg = calcUndirDegrees(undirMatrix1);
+const dirDeg = outDeg.map((o, i) => o + inDeg[i]);
+
+const pad = (d) => String(d).padStart(3);
+const hdr = Array.from({ length: n }, (_, i) => pad(i + 1)).join("");
+
+let t = "Вершина: " + hdr + "\n";
+t += "Степінь (ненапрямлений): " + undirDeg.map(pad).join("") + "\n";
+t += "Степінь (напрямлений): " + dirDeg.map(pad).join("") + "\n";
+t += "Напівстепінь виходу: " + outDeg.map(pad).join("") + "\n";
+t += "Напівстепінь заходу: " + inDeg.map(pad).join("") + "\n";
+
+const regUndir = undirDeg.every((d) => d === undirDeg[0]);
+const regDir = dirDeg.every((d) => d === dirDeg[0]);
+t +=
+  "Ненапрямлений: " +
+  (regUndir ? `однорідний, ступінь = ${undirDeg[0]}` : "не однорідний") +
+  "\n";
+t +=
+  "Напрямлений: " +
+  (regDir ? `однорідний, ступінь = ${dirDeg[0]}` : "не однорідний") +
+  "\n";
+
+const hanging = undirDeg
+  .map((d, i) => (d === 1 ? i + 1 : null))
+  .filter(Boolean);
+const isolated = undirDeg
+  .map((d, i) => (d === 0 ? i + 1 : null))
+  .filter(Boolean);
+t +=
+  "Висячі вершини: " + (hanging.length ? hanging.join(", ") : "немає") + "\n";
+t +=
+  "Ізольовані вершини: " +
+  (isolated.length ? isolated.join(", ") : "немає") +
+  "\n";
+
+document.getElementById("results1").textContent = t;
