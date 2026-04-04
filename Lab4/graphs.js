@@ -5,6 +5,7 @@ const n1 = 5,
 const seed = n1 * 1000 + n2 * 100 + n3 * 10 + n4;
 const n = 10 + n3;
 const k1 = 1.0 - n3 * 0.01 - n4 * 0.01 - 0.3;
+const k2 = 1.0 - n3 * 0.005 - n4 * 0.005 - 0.27;
 
 document.getElementById("info").textContent =
   `Варіант: ${seed}, n = ${n}, k1 = ${k1.toFixed(4)}, розміщення: трикутник`;
@@ -300,11 +301,11 @@ const regUndir = undirDeg.every((d) => d === undirDeg[0]);
 const regDir = dirDeg.every((d) => d === dirDeg[0]);
 t +=
   "Ненапрямлений: " +
-  (regUndir ? `однорідний, ступінь = ${undirDeg[0]}` : "не однорідний") +
+  (regUndir ? `однорідний, степінь = ${undirDeg[0]}` : "не однорідний") +
   "\n";
 t +=
   "Напрямлений: " +
-  (regDir ? `однорідний, ступінь = ${dirDeg[0]}` : "не однорідний") +
+  (regDir ? `однорідний, степінь = ${dirDeg[0]}` : "не однорідний") +
   "\n";
 
 const hanging = undirDeg
@@ -321,3 +322,101 @@ t +=
   "\n";
 
 document.getElementById("results1").textContent = t;
+
+// Графи (k2)
+const rng2 = makeRng(seed);
+
+const dirMatrix2 = [];
+for (let i = 0; i < n; i++) {
+  dirMatrix2[i] = [];
+  for (let j = 0; j < n; j++) {
+    const val = rng2() * 2.0;
+    dirMatrix2[i][j] = val * k2 >= 1.0 ? 1 : 0;
+  }
+}
+
+// Малювання напрямленого графу
+const dirCtx2 = document.getElementById("dirCanvas2").getContext("2d");
+dirCtx2.strokeStyle = "#27ae60";
+dirCtx2.fillStyle = "#27ae60";
+dirCtx2.lineWidth = 1.5;
+
+for (let i = 0; i < n; i++) {
+  for (let j = 0; j < n; j++) {
+    if (dirMatrix2[i][j] !== 1) continue;
+    const { x: x1, y: y1 } = points[i];
+    const { x: x2, y: y2 } = points[j];
+    if (i === j) {
+      drawLoop(dirCtx2, x1, y1);
+    } else {
+      const side = dirMatrix2[j][i] === 1 && i > j ? -1 : +1;
+      drawArrow(dirCtx2, x1, y1, x2, y2, side);
+    }
+  }
+}
+drawNodes(dirCtx2, "#27ae60");
+
+renderMatrix(dirMatrix2, document.getElementById("tDir2"));
+
+// Множення матриць
+function multiplyMatrix(A, B) {
+  const C = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++)
+    for (let k = 0; k < n; k++) {
+      if (A[i][k] === 0) continue;
+      for (let j = 0; j < n; j++) C[i][j] += A[i][k] * B[k][j];
+    }
+  return C;
+}
+
+const A2 = multiplyMatrix(dirMatrix2, dirMatrix2);
+const A3 = multiplyMatrix(A2, dirMatrix2);
+
+// Шляхи довжини 2
+console.log("Шляхи довжини 2:");
+for (let i = 0; i < n; i++) {
+  for (let j = 0; j < n; j++) {
+    if (A2[i][j] === 0) continue;
+    for (let k = 0; k < n; k++) {
+      if (dirMatrix2[i][k] === 1 && dirMatrix2[k][j] === 1)
+        console.log(`${i + 1} – ${k + 1} – ${j + 1}`);
+    }
+  }
+}
+
+// Шляхи довжини 3
+console.log("Шляхи довжини 3:");
+for (let i = 0; i < n; i++) {
+  for (let j = 0; j < n; j++) {
+    if (A3[i][j] === 0) continue;
+    for (let k1 = 0; k1 < n; k1++) {
+      if (dirMatrix2[i][k1] === 0) continue;
+      for (let k2 = 0; k2 < n; k2++) {
+        if (dirMatrix2[k1][k2] === 1 && dirMatrix2[k2][j] === 1)
+          console.log(`${i + 1} – ${k1 + 1} – ${k2 + 1} – ${j + 1}`);
+      }
+    }
+  }
+}
+
+// Транзитивне замикання (алгоритм Уоршелла)
+function warshall(matrix) {
+  const D = matrix.map((row) => [...row]);
+  for (let i = 0; i < n; i++) D[i][i] = 1;
+  for (let k = 0; k < n; k++)
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++)
+        if (D[i][k] === 1 && D[k][j] === 1) D[i][j] = 1;
+  return D;
+}
+
+const outDeg2 = calcOutDegrees(dirMatrix2);
+const inDeg2 = calcInDegrees(dirMatrix2);
+const reachMatrix = warshall(dirMatrix2);
+
+renderMatrix(reachMatrix, document.getElementById("tReach"));
+
+let t2 = "Напівстепінь виходу: " + outDeg2.map(pad).join("") + "\n";
+t2 += "Напівстепінь заходу: " + inDeg2.map(pad).join("") + "\n";
+
+document.getElementById("results2").textContent = t2;
