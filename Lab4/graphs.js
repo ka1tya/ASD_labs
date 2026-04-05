@@ -8,7 +8,7 @@ const k1 = 1.0 - n3 * 0.01 - n4 * 0.01 - 0.3;
 const k2 = 1.0 - n3 * 0.005 - n4 * 0.005 - 0.27;
 
 document.getElementById("info").textContent =
-  `Варіант: ${seed}, n = ${n}, k1 = ${k1.toFixed(4)}, розміщення: трикутник`;
+  `Варіант: ${seed}, n = ${n}, k1 = ${k1.toFixed(4)}, k2 = ${k2.toFixed(4)}, розміщення: трикутник`;
 
 // Генератор псевдовипадкових чисел
 function makeRng(seed) {
@@ -416,7 +416,110 @@ const reachMatrix = warshall(dirMatrix2);
 
 renderMatrix(reachMatrix, document.getElementById("tReach"));
 
+// Матриця сильної зв'язності та компоненти
+function buildStrongMatrix(D) {
+  return D.map((row, i) =>
+    row.map((v, j) => (v === 1 && D[j][i] === 1 ? 1 : 0)),
+  );
+}
+
+function findComponents(B) {
+  const visited = new Array(n).fill(false);
+  const components = [];
+  for (let i = 0; i < n; i++) {
+    if (visited[i]) continue;
+    const comp = [];
+    for (let j = 0; j < n; j++)
+      if (B[i][j] === 1) {
+        comp.push(j + 1);
+        visited[j] = true;
+      }
+    components.push(comp);
+  }
+  return components;
+}
+
+const strongMat = buildStrongMatrix(reachMatrix);
+const components = findComponents(strongMat);
+
+renderMatrix(strongMat, document.getElementById("tStrong"));
+
 let t2 = "Напівстепінь виходу: " + outDeg2.map(pad).join("") + "\n";
 t2 += "Напівстепінь заходу: " + inDeg2.map(pad).join("") + "\n";
+components.forEach((comp, idx) => {
+  t2 += `Компонента сильної зв'язності ${idx + 1}: { ${comp.join(", ")} }\n`;
+});
 
 document.getElementById("results2").textContent = t2;
+
+// Малювання графу конденсації
+function condensationGraph(components) {
+  const numComp = components.length;
+  const canvas = document.getElementById("condCanvas");
+  const ctx = canvas.getContext("2d");
+  const ccx = canvas.width / 2,
+    ccy = canvas.height / 2;
+  const cr = Math.min(ccx, ccy) - 55;
+  const CR = 26;
+
+  const compPoints = components.map((_, i) => {
+    const angle = (2 * Math.PI * i) / numComp - Math.PI / 2;
+    return {
+      x: ccx + (numComp > 1 ? cr * Math.cos(angle) : 0),
+      y: ccy + (numComp > 1 ? cr * Math.sin(angle) : 0),
+    };
+  });
+
+  const vertexToComp = new Array(n).fill(0);
+  components.forEach((comp, ci) =>
+    comp.forEach((v) => {
+      vertexToComp[v - 1] = ci;
+    }),
+  );
+
+  // Матриця суміжності графа конденсації
+  const condMatrix = Array.from({ length: numComp }, () =>
+    new Array(numComp).fill(0),
+  );
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++)
+      if (dirMatrix2[i][j] === 1) {
+        const ci = vertexToComp[i],
+          cj = vertexToComp[j];
+        if (ci !== cj) condMatrix[ci][cj] = 1;
+      }
+
+  // Малювання ребер
+  ctx.strokeStyle = "#444";
+  ctx.fillStyle = "#444";
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < numComp; i++)
+    for (let j = 0; j < numComp; j++) {
+      if (condMatrix[i][j] !== 1) continue;
+      const { x: x1, y: y1 } = compPoints[i];
+      const { x: x2, y: y2 } = compPoints[j];
+      const side = condMatrix[j][i] === 1 && i > j ? -1 : +1;
+      drawArrow(ctx, x1, y1, x2, y2, side);
+    }
+
+  // Малювання вершин
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  components.forEach((comp, i) => {
+    const { x, y } = compPoints[i];
+    ctx.beginPath();
+    ctx.arc(x, y, CR, 0, 2 * Math.PI);
+    ctx.fillStyle = "#eaf4fb";
+    ctx.fill();
+    ctx.strokeStyle = "#1a5276";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#1a5276";
+    ctx.font = "bold 12px Arial";
+    ctx.fillText("C" + (i + 1), x, y - 7);
+    ctx.font = "9px Arial";
+    ctx.fillText("{" + comp.join(",") + "}", x, y + 7);
+  });
+}
+
+condensationGraph(components);
