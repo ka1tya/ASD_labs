@@ -17,20 +17,46 @@
       <table id="tDir"></table>
     </div>
 
-    <div class="protocol" id="protocol">
-      Натисніть "Наступний крок" щоб почати обхід
+    <h3>Обхід в ширину (BFS)</h3>
+    <div class="controls">
+      <button id="btnBStep" onclick="bNextStep()">Наступний крок</button>
+      <button onclick="resetBFS()">Скинути</button>
+      <span class="legend">
+        <span class="dot white"></span> не відвідана
+        <span class="dot yellow"></span> в черзі
+        <span class="dot green"></span> оброблена
+      </span>
+    </div>
+    <div class="protocol" id="bProtocol">
+      Натисніть "Наступний крок" щоб почати BFS
     </div>
 
-    <div id="bfsResults" style="display: none">
-      <h3>Результати BFS</h3>
+    <div id="bResults" style="display: none">
+      <h4>Вектор відповідності BFS</h4>
+      <div class="results" id="bVector"></div>
+      <h4>Матриця суміжності дерева BFS</h4>
+      <div class="mat-block"><table id="tBTree"></table></div>
+    </div>
 
-      <h4>Вектор відповідності (вершина → порядок відвідування)</h4>
-      <div class="results" id="bfsVector"></div>
+    <h3>Обхід в глибину (DFS)</h3>
+    <div class="controls">
+      <button id="btnDStep" onclick="dNextStep()">Наступний крок</button>
+      <button onclick="resetDFS()">Скинути</button>
+      <span class="legend">
+        <span class="dot white"></span> не відвідана
+        <span class="dot yellow"></span> в стеку
+        <span class="dot green"></span> оброблена
+      </span>
+    </div>
+    <div class="protocol" id="dProtocol">
+      Натисніть "Наступний крок" щоб почати DFS
+    </div>
 
-      <h4>Матриця суміжності дерева обходу</h4>
-      <div class="mat-block">
-        <table id="tTree"></table>
-      </div>
+    <div id="dResults" style="display: none">
+      <h4>Вектор відповідності DFS</h4>
+      <div class="results" id="dVector"></div>
+      <h4>Матриця суміжності дерева DFS</h4>
+      <div class="mat-block"><table id="tDTree"></table></div>
     </div>
 
     <script src="graphs.js"></script>

@@ -238,21 +238,34 @@ function renderMatrix(matrix, tableEl) {
 const canvas = document.getElementById("graphCanvas");
 const ctx = canvas.getContext("2d");
 
-const nodeColors = new Array(n).fill("white");
+let nodeColorsB = new Array(n).fill("white");
+let nodeColorsD = new Array(n).fill("white");
+
+// Матриці для збереження дерев обходу
+const bTree = [];
+const dTree = [];
+for (let i = 0; i < n; i++) {
+  bTree[i] = new Array(n).fill(0);
+  dTree[i] = new Array(n).fill(0);
+}
+
+let activeMode = "bfs";
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawEdges(ctx, dirMatrix, "#ccc");
+  const tree = activeMode === "bfs" ? bTree : dTree;
   ctx.lineWidth = 2.5;
-  drawEdges(ctx, treeMatrix, "#1a6bbd");
+  drawEdges(ctx, tree, "#1a6bbd");
   ctx.lineWidth = 1.5;
-  drawNodes(ctx, nodeColors);
+  const colors = activeMode === "bfs" ? nodeColorsB : nodeColorsD;
+  drawNodes(ctx, colors);
 }
 
 redraw();
 renderMatrix(dirMatrix, document.getElementById("tDir"));
 
-function findStartV(visited) {
+function findStart(visited) {
   for (let i = 0; i < n; i++) {
     if (visited[i]) continue;
     for (let j = 0; j < n; j++) {
@@ -263,140 +276,273 @@ function findStartV(visited) {
 }
 
 // Стан BFS
-let visited = new Array(n).fill(false);
-let queue = [];
-let order = [];
-let log = [];
-let done = false;
+let bVisited = new Array(n).fill(false);
+let bQueue = [];
+let bOrder = [];
+let bLog = [];
+let bDone = false;
 
 // Ініціалізація BFS
 function initBFS() {
-  visited = new Array(n).fill(false);
-  queue = [];
-  order = [];
-  log = [];
-  done = false;
+  bVisited = new Array(n).fill(false);
+  bQueue = [];
+  bOrder = [];
+  bLog = [];
+  bDone = false;
 
   // Знаходження стартової вершини
-  const start = findStartV(visited);
+  const start = findStart(bVisited);
   if (start === -1) {
-    document.getElementById("protocol").textContent =
+    document.getElementById("bProtocol").textContent =
       "Немає вершин з вихідними дугами.";
-    done = true;
+    bDone = true;
     return;
   }
 
   // Додавання стартової вершини в чергу
-  queue.push(start);
-  visited[start] = true;
-  nodeColors[start] = "#ffe066";
+  bQueue.push(start);
+  bVisited[start] = true;
+  nodeColorsB[start] = "#ffe066";
 
-  log.push(`Початок BFS. Стартова вершина: ${start + 1}`);
-  log.push(`Черга: [${queue.map((v) => v + 1).join(", ")}]`);
+  bLog.push(`Початок BFS. Стартова вершина: ${start + 1}`);
+  bLog.push(`Черга: [${bQueue.map((v) => v + 1).join(", ")}]`);
 
   redraw();
-  document.getElementById("protocol").textContent = log.join("\n");
+  document.getElementById("bProtocol").textContent = bLog.join("\n");
 }
 
 // Один крок BFS
-function nextStep() {
-  if (done) return;
+function bNextStep() {
+  if (bDone) return;
+  activeMode = "bfs";
 
-  if (queue.length === 0) {
-    const next = findStartV(visited);
+  if (bQueue.length === 0) {
+    const next = findStart(bVisited);
     if (next === -1) {
-      done = true;
-      document.getElementById("btnStep").disabled = true;
-      log.push("\nBFS завершено!");
-      log.push(`Порядок відвідування: ${order.map((v) => v + 1).join(" → ")}`);
-      document.getElementById("protocol").textContent = log.join("\n");
-      showBFSResults();
+      bDone = true;
+      document.getElementById("btnBStep").disabled = true;
+      bLog.push("\nBFS завершено!");
+      bLog.push(
+        `Порядок відвідування: ${bOrder.map((v) => v + 1).join(" → ")}`,
+      );
+      document.getElementById("bProtocol").textContent = bLog.join("\n");
+      showBResults();
       return;
     }
-    queue.push(next);
-    visited[next] = true;
-    nodeColors[next] = "#ffe066";
-    log.push(
+    bQueue.push(next);
+    bVisited[next] = true;
+    nodeColorsB[next] = "#ffe066";
+    bLog.push(
       `\nНевідвідані вершини залишились. Продовжуємо з вершини ${next + 1}`,
     );
-    log.push(`Черга: [${queue.map((v) => v + 1).join(", ")}]`);
+    bLog.push(`Черга: [${bQueue.map((v) => v + 1).join(", ")}]`);
     redraw();
-    document.getElementById("protocol").textContent = log.join("\n");
+    document.getElementById("bProtocol").textContent = bLog.join("\n");
     return;
   }
 
   // Витягання вершини з черги
-  const current = queue.shift();
-  const orderNum = order.length + 1;
-  order.push(current);
-  nodeColors[current] = "#27ae60";
+  const current = bQueue.shift();
+  bOrder.push(current);
+  nodeColorsB[current] = "#27ae60";
 
-  log.push(`\nКрок ${orderNum}: обробляємо вершину ${current + 1}`);
+  bLog.push(`\nКрок ${bOrder.length}: обробляємо вершину ${current + 1}`);
 
   // Перебирання сусідів в порядку нумерації
-  let addedToQueue = [];
+  const added = [];
   for (let j = 0; j < n; j++) {
     if (dirMatrix[current][j] !== 1) continue;
     if (j === current) continue;
 
-    if (!visited[j]) {
-      visited[j] = true;
-      queue.push(j);
-      nodeColors[j] = "#ffe066";
-      addedToQueue.push(j + 1);
+    if (!bVisited[j]) {
+      bVisited[j] = true;
+      bQueue.push(j);
+      nodeColorsB[j] = "#ffe066";
+      added.push(j + 1);
 
-      treeMatrix[current][j] = 1;
+      bTree[current][j] = 1;
     }
   }
 
-  if (addedToQueue.length > 0) {
-    log.push(`  Додано до черги: ${addedToQueue.join(", ")}`);
+  if (added.length > 0) {
+    bLog.push(`  Додано до черги: ${added.join(", ")}`);
   } else {
-    log.push(`  Нових вершин не додано`);
+    bLog.push(`  Нових вершин не додано`);
   }
-  log.push(`  Черга: [${queue.map((v) => v + 1).join(", ")}]`);
+  bLog.push(`  Черга: [${bQueue.map((v) => v + 1).join(", ")}]`);
 
   redraw();
-  document.getElementById("protocol").textContent = log.join("\n");
+  document.getElementById("bProtocol").textContent = bLog.join("\n");
 }
 
 // Скидання BFS
 function resetBFS() {
   for (let i = 0; i < n; i++) {
-    nodeColors[i] = "white";
-    for (let j = 0; j < n; j++) treeMatrix[i][j] = 0;
+    nodeColorsB[i] = "white";
+    for (let j = 0; j < n; j++) bTree[i][j] = 0;
   }
-  document.getElementById("btnStep").disabled = false;
-  document.getElementById("bfsResults").style.display = "none";
-  document.getElementById("protocol").textContent =
+  document.getElementById("btnBStep").disabled = false;
+  document.getElementById("bResults").style.display = "none";
+  document.getElementById("bProtocol").textContent =
     'Натисніть "Наступний крок" щоб почати обхід';
   redraw();
   initBFS();
 }
 
 // Показ результатів BFS
-function showBFSResults() {
-  document.getElementById("bfsResults").style.display = "block";
+function showBResults() {
+  document.getElementById("bResults").style.display = "block";
 
   let vectorText = "Вершина → порядок відвідування:\n";
-  for (let i = 0; i < order.length; i++) {
-    vectorText += `  вершина ${order[i] + 1} → ${i + 1}\n`;
+  for (let i = 0; i < bOrder.length; i++) {
+    vectorText += `  вершина ${bOrder[i] + 1} → ${i + 1}\n`;
   }
 
   const notVisited = [];
   for (let i = 0; i < n; i++) {
-    if (!visited[i]) notVisited.push(i + 1);
+    if (!bVisited[i]) notVisited.push(i + 1);
   }
   if (notVisited.length > 0)
     vectorText += `  (не відвідані: ${notVisited.join(", ")})`;
 
-  document.getElementById("bfsVector").textContent = vectorText;
-  renderMatrix(treeMatrix, document.getElementById("tTree"));
+  document.getElementById("bVector").textContent = vectorText;
+  renderMatrix(bTree, document.getElementById("tBTree"));
 }
 
-const treeMatrix = [];
-for (let i = 0; i < n; i++) {
-  treeMatrix[i] = new Array(n).fill(0);
+// Стан DFS
+let dVisited = new Array(n).fill(false);
+let dStack = [];
+let dParent = new Array(n).fill(-1);
+let dOrder = [];
+let dLog = [];
+let dDone = false;
+let dStep = 0;
+
+// Ініціалізація DFS
+function initDFS() {
+  dVisited = new Array(n).fill(false);
+  dStack = [];
+  dParent = new Array(n).fill(-1);
+  dOrder = [];
+  dLog = [];
+  dDone = false;
+
+  const start = findStart(dVisited);
+  if (start === -1) {
+    document.getElementById("dProtocol").textContent =
+      "Немає вершин з вихідними дугами.";
+    dDone = true;
+    return;
+  }
+
+  dStack.push(start);
+  dVisited[start] = true;
+  nodeColorsD[start] = "#ffe066";
+
+  dLog.push(`Початок DFS. Стартова вершина: ${start + 1}`);
+  dLog.push(`Стек: [${dStack.map((v) => v + 1).join(", ")}]`);
+
+  activeMode = "dfs";
+  redraw();
+  document.getElementById("dProtocol").textContent = dLog.join("\n");
+}
+
+// Знаходження стартової вершини
+function dNextStep() {
+  if (dDone) return;
+  activeMode = "dfs";
+
+  if (dStack.length === 0) {
+    const next = findStart(dVisited);
+    if (next === -1) {
+      dDone = true;
+      document.getElementById("btnDStep").disabled = true;
+      dLog.push("\nDFS завершено!");
+      dLog.push(
+        `Порядок відвідування: ${dOrder.map((v) => v + 1).join(" → ")}`,
+      );
+      document.getElementById("dProtocol").textContent = dLog.join("\n");
+      showDFSResults();
+      return;
+    }
+    dStack.push(next);
+    dVisited[next] = true;
+    nodeColorsD[next] = "#ffe066";
+    dLog.push(`\nПродовжуємо з вершини ${next + 1}`);
+    dLog.push(`Стек: [${dStack.map((v) => v + 1).join(", ")}]`);
+    redraw();
+    document.getElementById("dProtocol").textContent = dLog.join("\n");
+    return;
+  }
+
+  const current = dStack[dStack.length - 1];
+
+  // Знаходження першого невідвіданого сусіда
+  let found = -1;
+  for (let j = 0; j < n; j++) {
+    if (dirMatrix[current][j] === 1 && j !== current && !dVisited[j]) {
+      found = j;
+      break;
+    }
+  }
+
+  if (found !== -1) {
+    dVisited[found] = true;
+    dParent[found] = current;
+    dStack.push(found);
+    nodeColorsD[found] = "#ffe066";
+    dTree[current][found] = 1;
+
+    dStep++;
+    dLog.push(
+      `\nКрок ${dStep}: з вершини ${current + 1} йдемо до ${found + 1}`,
+    );
+    dLog.push(`  Стек: [${dStack.map((v) => v + 1).join(", ")}]`);
+  } else {
+    dStack.pop();
+    dOrder.push(current);
+    nodeColorsD[current] = "#27ae60";
+
+    dStep++;
+    dLog.push(`\nКрок ${dStep}: повертаємось з вершини ${current + 1}`);
+    dLog.push(`  Стек: [${dStack.map((v) => v + 1).join(", ")}]`);
+  }
+
+  redraw();
+  document.getElementById("dProtocol").textContent = dLog.join("\n");
+}
+
+// Скидання DFS
+function resetDFS() {
+  nodeColorsD = new Array(n).fill("white");
+  for (let i = 0; i < n; i++) dTree[i] = new Array(n).fill(0);
+  document.getElementById("btnDStep").disabled = false;
+  document.getElementById("dResults").style.display = "none";
+  document.getElementById("dProtocol").textContent =
+    'Натисніть "Наступний крок" щоб почати DFS';
+  activeMode = "dfs";
+  redraw();
+  initDFS();
+}
+
+// Показ результатів DFS
+function showDFSResults() {
+  document.getElementById("dResults").style.display = "block";
+
+  let text = "Вершина → порядок відвідування:\n";
+  for (let i = 0; i < dOrder.length; i++) {
+    text += `  вершина ${dOrder[i] + 1} → ${i + 1}\n`;
+  }
+  const notVisited = [];
+  for (let i = 0; i < n; i++) {
+    if (!dVisited[i]) notVisited.push(i + 1);
+  }
+  if (notVisited.length > 0)
+    text += `  (не відвідані: ${notVisited.join(", ")})`;
+
+  document.getElementById("dVector").textContent = text;
+  renderMatrix(dTree, document.getElementById("tDTree"));
 }
 
 initBFS();
+initDFS();
