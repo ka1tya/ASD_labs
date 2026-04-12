@@ -242,9 +242,161 @@ const nodeColors = new Array(n).fill("white");
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawEdges(ctx, dirMatrix, "#c0392b");
+  drawEdges(ctx, dirMatrix, "#ccc");
+  ctx.lineWidth = 2.5;
+  drawEdges(ctx, treeMatrix, "#1a6bbd");
+  ctx.lineWidth = 1.5;
   drawNodes(ctx, nodeColors);
 }
 
 redraw();
 renderMatrix(dirMatrix, document.getElementById("tDir"));
+
+function findStartV(visited) {
+  for (let i = 0; i < n; i++) {
+    if (visited[i]) continue;
+    for (let j = 0; j < n; j++) {
+      if (dirMatrix[i][j] === 1) return i;
+    }
+  }
+  return -1;
+}
+
+// Стан BFS
+let visited = new Array(n).fill(false);
+let queue = [];
+let order = [];
+let log = [];
+let done = false;
+
+// Ініціалізація BFS
+function initBFS() {
+  visited = new Array(n).fill(false);
+  queue = [];
+  order = [];
+  log = [];
+  done = false;
+
+  // Знаходження стартової вершини
+  const start = findStartV(visited);
+  if (start === -1) {
+    document.getElementById("protocol").textContent =
+      "Немає вершин з вихідними дугами.";
+    done = true;
+    return;
+  }
+
+  // Додавання стартової вершини в чергу
+  queue.push(start);
+  visited[start] = true;
+  nodeColors[start] = "#ffe066";
+
+  log.push(`Початок BFS. Стартова вершина: ${start + 1}`);
+  log.push(`Черга: [${queue.map((v) => v + 1).join(", ")}]`);
+
+  redraw();
+  document.getElementById("protocol").textContent = log.join("\n");
+}
+
+// Один крок BFS
+function nextStep() {
+  if (done) return;
+
+  if (queue.length === 0) {
+    const next = findStartV(visited);
+    if (next === -1) {
+      done = true;
+      document.getElementById("btnStep").disabled = true;
+      log.push("\nBFS завершено!");
+      log.push(`Порядок відвідування: ${order.map((v) => v + 1).join(" → ")}`);
+      document.getElementById("protocol").textContent = log.join("\n");
+      showBFSResults();
+      return;
+    }
+    queue.push(next);
+    visited[next] = true;
+    nodeColors[next] = "#ffe066";
+    log.push(
+      `\nНевідвідані вершини залишились. Продовжуємо з вершини ${next + 1}`,
+    );
+    log.push(`Черга: [${queue.map((v) => v + 1).join(", ")}]`);
+    redraw();
+    document.getElementById("protocol").textContent = log.join("\n");
+    return;
+  }
+
+  // Витягання вершини з черги
+  const current = queue.shift();
+  const orderNum = order.length + 1;
+  order.push(current);
+  nodeColors[current] = "#27ae60";
+
+  log.push(`\nКрок ${orderNum}: обробляємо вершину ${current + 1}`);
+
+  // Перебирання сусідів в порядку нумерації
+  let addedToQueue = [];
+  for (let j = 0; j < n; j++) {
+    if (dirMatrix[current][j] !== 1) continue;
+    if (j === current) continue;
+
+    if (!visited[j]) {
+      visited[j] = true;
+      queue.push(j);
+      nodeColors[j] = "#ffe066";
+      addedToQueue.push(j + 1);
+
+      treeMatrix[current][j] = 1;
+    }
+  }
+
+  if (addedToQueue.length > 0) {
+    log.push(`  Додано до черги: ${addedToQueue.join(", ")}`);
+  } else {
+    log.push(`  Нових вершин не додано`);
+  }
+  log.push(`  Черга: [${queue.map((v) => v + 1).join(", ")}]`);
+
+  redraw();
+  document.getElementById("protocol").textContent = log.join("\n");
+}
+
+// Скидання BFS
+function resetBFS() {
+  for (let i = 0; i < n; i++) {
+    nodeColors[i] = "white";
+    for (let j = 0; j < n; j++) treeMatrix[i][j] = 0;
+  }
+  document.getElementById("btnStep").disabled = false;
+  document.getElementById("bfsResults").style.display = "none";
+  document.getElementById("protocol").textContent =
+    'Натисніть "Наступний крок" щоб почати обхід';
+  redraw();
+  initBFS();
+}
+
+// Показ результатів BFS
+function showBFSResults() {
+  document.getElementById("bfsResults").style.display = "block";
+
+  let vectorText = "Вершина → порядок відвідування:\n";
+  for (let i = 0; i < order.length; i++) {
+    vectorText += `  вершина ${order[i] + 1} → ${i + 1}\n`;
+  }
+
+  const notVisited = [];
+  for (let i = 0; i < n; i++) {
+    if (!visited[i]) notVisited.push(i + 1);
+  }
+  if (notVisited.length > 0)
+    vectorText += `  (не відвідані: ${notVisited.join(", ")})`;
+
+  document.getElementById("bfsVector").textContent = vectorText;
+  renderMatrix(treeMatrix, document.getElementById("tTree"));
+}
+
+const treeMatrix = [];
+for (let i = 0; i < n; i++) {
+  treeMatrix[i] = new Array(n).fill(0);
+}
+
+initBFS();
