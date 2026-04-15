@@ -22,6 +22,39 @@
       <table id="tWeights"></table>
     </div>
 
+    <h3>Алгоритм Прима — покроковий обхід</h3>
+
+    <div class="controls">
+      <button id="btnStep" onclick="pNextStep()">Наступний крок</button>
+      <button onclick="resetPrima()">Скинути</button>
+      <span class="legend">
+        <span class="dot green"></span> в кістяку
+        <span class="dot yellow"></span> кандидат
+        <span class="dot white"></span> не відвідана
+        <span
+          style="
+            display: inline-block;
+            width: 30px;
+            height: 3px;
+            background: #e74c3c;
+            vertical-align: middle;
+          "
+        ></span>
+        ребро кістяка
+      </span>
+    </div>
+
+    <div class="protocol" id="protocol">
+      Натисніть "Наступний крок" щоб почати алгоритм Прима
+    </div>
+
+    <div id="pResults" style="display: none">
+      <h4>Результат — мінімальний кістяк</h4>
+      <div class="results" id="pVector"></div>
+      <h4>Матриця суміжності кістяка</h4>
+      <div class="mat-block"><table id="tSpanTree"></table></div>
+    </div>
+
     <script src="graphs.js"></script>
   </body>
 </html>

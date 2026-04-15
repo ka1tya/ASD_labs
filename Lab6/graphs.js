@@ -171,11 +171,11 @@ function getControlPoint(x1, y1, x2, y2, side) {
 }
 
 // Малювання дуги між двома вершинами
-function drawEdge(ctx, x1, y1, x2, y2, side, color, weight, showWeight) {
+function drawEdge(ctx, x1, y1, x2, y2, lineWidth, color, weight, showWeight) {
   ctx.strokeStyle = color;
-  ctx.fillStyle = color;
+  ctx.lineWidth = lineWidth;
 
-  const { cpx, cpy } = getControlPoint(x1, y1, x2, y2, side);
+  const { cpx, cpy } = getControlPoint(x1, y1, x2, y2, +1);
   const tStart = findEdgeT(x1, y1, cpx, cpy, x2, y2, x1, y1, NODE_R, false);
   const tEnd = findEdgeT(x1, y1, cpx, cpy, x2, y2, x2, y2, NODE_R, true);
   const ps = bezierPoint(tStart, x1, y1, cpx, cpy, x2, y2);
@@ -259,7 +259,6 @@ function renderMatrix(matrix, tableId) {
       const v = matrix[i][j];
       td.textContent = v;
       if (v === 0) {
-        // нуль — сірий курсив
       } else if (v === 1 && tableId === "tUndir") {
         td.className = "one";
       } else if (v > 0) {
@@ -267,6 +266,12 @@ function renderMatrix(matrix, tableId) {
       }
     }
   }
+}
+
+// Матриця мінімального кістяка
+const spanTree = [];
+for (let i = 0; i < n; i++) {
+  spanTree[i] = new Array(n).fill(0);
 }
 
 // Малювання початкового стану графа
@@ -277,10 +282,180 @@ let nodeColors = new Array(n).fill("white");
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawAllEdges(ctx, undirMatrix, W, "#1a5276", true);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (undirMatrix[i][j] !== 1) continue;
+      drawEdge(
+        ctx,
+        points[i].x,
+        points[i].y,
+        points[j].x,
+        points[j].y,
+        1.5,
+        "#ccc",
+        W[i][j],
+        true,
+      );
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (spanTree[i][j] !== 1) continue;
+      drawEdge(
+        ctx,
+        points[i].x,
+        points[i].y,
+        points[j].x,
+        points[j].y,
+        3,
+        "#e74c3c",
+        W[i][j],
+        true,
+      );
+    }
+  }
+
   drawNodes(ctx, nodeColors);
 }
 
 redraw();
 renderMatrix(undirMatrix, "tUndir");
 renderMatrix(W, "tWeights");
+
+// Стан алгоритму Прима
+let inTree = new Array(n).fill(false); // чи вершина в кістяку
+let pLog = [];
+let pDone = false;
+let pStep = 0;
+let total = 0;
+
+// Ініціалізація алгоритму
+function initPrima() {
+  inTree = new Array(n).fill(false);
+  pLog = [];
+  pDone = false;
+  pStep = 0;
+  total = 0;
+  nodeColors = new Array(n).fill("white");
+
+  for (let i = 0; i < n; i++) {
+    spanTree[i] = new Array(n).fill(0);
+  }
+
+  inTree[0] = true;
+  nodeColors[0] = "#27ae60";
+
+  pLog.push("Початок алгоритму Прима. Стартова вершина: 1");
+  pLog.push(`В кістяку: { 1 }`);
+
+  redraw();
+  document.getElementById("protocol").textContent = pLog.join("\n");
+}
+
+function pNextStep() {
+  if (pDone) return;
+
+  pStep++;
+
+  // Знаходження ребра з мінімальною вагою
+  let minWeight = Infinity;
+  let bestI = -1,
+    bestJ = -1;
+
+  for (let i = 0; i < n; i++) {
+    if (!inTree[i]) continue;
+    for (let j = 0; j < n; j++) {
+      if (inTree[j]) continue;
+      if (undirMatrix[i][j] !== 1) continue;
+      if (W[i][j] < minWeight) {
+        minWeight = W[i][j];
+        bestI = i;
+        bestJ = j;
+      }
+    }
+  }
+
+  if (bestJ === -1) {
+    pDone = true;
+    document.getElementById("btnStep").disabled = true;
+    pLog.push("\nАлгоритм Прима завершено!");
+    pLog.push(`Загальна вага кістяка: ${total}`);
+    document.getElementById("protocol").textContent = pLog.join("\n");
+    showPResults();
+    return;
+  }
+
+  // Додавання вершини та ребра до кістяка
+  inTree[bestJ] = true;
+  spanTree[bestI][bestJ] = 1;
+  spanTree[bestJ][bestI] = 1;
+  total += minWeight;
+  nodeColors[bestJ] = "#27ae60";
+
+  for (let i = 0; i < n; i++) {
+    if (inTree[i]) continue;
+    let neighbor = false;
+    for (let j = 0; j < n; j++) {
+      if (inTree[j] && undirMatrix[i][j] === 1) {
+        neighbor = true;
+        break;
+      }
+    }
+    nodeColors[i] = neighbor ? "#ffe066" : "white";
+  }
+
+  const treeVertices = [];
+  for (let i = 0; i < n; i++) {
+    if (inTree[i]) treeVertices.push(i + 1);
+  }
+
+  pLog.push(
+    `\nКрок ${pStep}: додаємо ребро (${bestI + 1}, ${bestJ + 1}), вага = ${minWeight}`,
+  );
+  pLog.push(`  В кістяку: { ${treeVertices.join(", ")} }`);
+  pLog.push(`  Загальна вага: ${total}`);
+
+  redraw();
+  document.getElementById("protocol").textContent = pLog.join("\n");
+
+  if (treeVertices.length === n) {
+    pDone = true;
+    document.getElementById("btnStep").disabled = true;
+    pLog.push("\nАлгоритм Прима завершено!");
+    pLog.push(`Загальна вага кістяка: ${total}`);
+    document.getElementById("protocol").textContent = pLog.join("\n");
+    showPResults();
+  }
+}
+
+// Скидання алгоритму
+function resetPrima() {
+  document.getElementById("btnStep").disabled = false;
+  document.getElementById("pResults").style.display = "none";
+  document.getElementById("protocol").textContent =
+    'Натисніть "Наступний крок" щоб почати алгоритм Прима';
+  initPrima();
+}
+
+function showPResults() {
+  document.getElementById("pResults").style.display = "block";
+
+  // Список ребер кістяка
+  let text = `Загальна вага мінімального кістяка: ${total}\n\n`;
+  text += "Ребра кістяка:\n";
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (spanTree[i][j] === 1) {
+        text += `  (${i + 1}, ${j + 1})  вага = ${W[i][j]}\n`;
+      }
+    }
+  }
+
+  document.getElementById("pVector").textContent = text;
+  renderMatrix(spanTree, "tSpanTree");
+}
+
+// Запуск алгоритму
+initPrima();
