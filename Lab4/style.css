@@ -36,7 +36,7 @@ canvas {
   flex-wrap: wrap;
 }
 
-.mat-block h3 {
+.mat-block {
   font-size: 14px;
   margin-bottom: 5px;
 }
