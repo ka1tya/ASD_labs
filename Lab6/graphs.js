@@ -325,7 +325,7 @@ renderMatrix(undirMatrix, "tUndir");
 renderMatrix(W, "tWeights");
 
 // Стан алгоритму Прима
-let inTree = new Array(n).fill(false); // чи вершина в кістяку
+let inTree = new Array(n).fill(false);
 let pLog = [];
 let pDone = false;
 let pStep = 0;
